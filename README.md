@@ -8,7 +8,7 @@ Attempting to look for an efficient method to either
 ## Requirements
 
 - gstreamer
-- gstreamer bug, ugly and vaapi plugins
+- gstreamer bad, ugly and vaapi plugins
 - rtsp-simple-streamer
 - vlc player
 
@@ -46,7 +46,7 @@ openssl genrsa -out server.key 2048
 openssl req -new -x509 -sha256 -key server.key -out server.crt -days 3650
 ```
 
-Run rtsp-simple-server with the command `sudo ./rtsp-simple-server`
+Run rtsp-simple-server from this directory with the command `sudo rtsp-simple-server`
 
 
 ## VLC Player
@@ -60,5 +60,27 @@ To run a simple test stream with RTSP-simple-server, you much
 - start rtsp-simple-server
 - ensure the config is configured for the gstreamer test pattern
 - open vlc player
+
+
+
+## Testing
+All testing is using a node library `@monyone/ts-fragmenter` which takes in a MPEG-TS stream and converts it into LL-HLS.
+
+Testing has shown that an RTSP resources can be ingested and converted into MPEG-TS outputs using an FFMPEG child processes, using the library `node-rtsp-stream/mpeg1muxer`
+This is not necessarily scalable, but does work with existing RTSP streams.
+
+An alternative has been to directly ingest mpeg-ts from GStreamer using the `mpegtsmux/tsparse/ and fdsink` sinks.
+- `fdsink` enables outputting directly to the stdpipe
+- `multisocketsink` would in fact be a more valid sink, as this enables configuring UNIX sockets
+
+For now fsink work with the following command, with the example node application, `node-llhls-origin-example`
+```
+gst-launch-1.0 videotestsrc is-live=true ! clockoverlay halignment=right valignment=top ! timeoverlay ! videoconvert ! videoscale ! video/x-raw,width=640,height=480 ! x264enc speed-preset=veryfast tune=zerolatency bitrate=800 ! video/x-h264, stream-format=avc, profile=high  ! h264parse config-interval=1 ! mpegtsmux ! tsparse ! fdsink  | npm run start
+```
+
+
+
+*some issues found include, the H.264 encoding MUST be set to HIGH, or baseline, as HEVC encoding can only be done with fmp4*
+https://developer.apple.com/documentation/http_live_streaming/http_live_streaming_hls_authoring_specification_for_apple_devices
 
 
