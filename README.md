@@ -12,6 +12,20 @@ Attempting to look for an efficient method to either
 - rtsp-simple-streamer
 - vlc player
 
+## Usage
+
+This code has been overhauled
+```
+npm run start
+```
+The code will execute a Gstreamer testvideosrc, and output to a given FIFO file (./myfifo1)
+The script located in `./src/index.ts` is also executed, and subscribes to the FIFO file.
+As the MPEG-TS is streamed from GStreamer, it is read by the node script and served as LL-HLS.
+
+The number of HLS streams is dictated by `MAX_THREADS`, with each HLS stream being served at,
+`http://localhost:3001/:id/manifest.m3u8`
+
+
 ## GStreamer
 A simple gstreamer generator for producing a test pattern, with a clock and time overlay
 ```
@@ -105,3 +119,9 @@ i.e.
 ```
 cat myfifo1 | npm run start
 ```
+
+
+## Test HLS Streams
+- https://www.theoplayer.com/test-your-stream-hls-dash-hesp (https://www.npmjs.com/package/theoplayer)
+- https://demo.ovenplayer.com/
+- https://github.com/video-dev/hls.js/
