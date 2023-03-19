@@ -17,6 +17,7 @@
     "fs": "^0.0.1-security",
     "net": "^1.0.2",
     "node-rtsp-stream": "^0.0.9",
+    "stream": "^0.0.2",
     "ts-node": "^10.9.1"
   }
 }
