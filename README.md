@@ -84,3 +84,24 @@ gst-launch-1.0 videotestsrc is-live=true ! clockoverlay halignment=right valignm
 https://developer.apple.com/documentation/http_live_streaming/http_live_streaming_hls_authoring_specification_for_apple_devices
 
 
+
+
+## Using Named Pipes
+
+Use of named pipes will allow us to output directly from an existing GStreamer pipeline, replacing the existing HLSSink.
+
+Start by creating the named pipe
+```
+mkfifo <FILENAME>
+```
+
+Then start the GStreamer test pipeline, with a filesink
+```
+gst-launch-1.0 videotestsrc is-live=true ! clockoverlay halignment=right valignment=top ! timeoverlay ! videoconvert ! videoscale ! video/x-raw,width=640,height=480 ! x264enc speed-preset=veryfast tune=zerolatency bitrate=800 ! video/x-h264, stream-format=avc, profile=high  ! h264parse config-interval=1 ! mpegtsmux ! tsparse ! filesink location=./myfifo1
+```
+This will now wait until that pipe is opened on the other end
+
+i.e.
+```
+cat myfifo1 | npm run start
+```

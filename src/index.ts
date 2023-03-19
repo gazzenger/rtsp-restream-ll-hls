@@ -14,12 +14,15 @@ import express from 'express';
 import cors from 'cors';
 
 
+import * as fs from 'fs';
+import net from 'net';
 
-// let m3u8 = new M3U8({ 
-//   length: 2,
-//   partTarget: 0.5,
-//   lowLatencyMode: true,
-// });
+
+let m3u8 = new M3U8({ 
+  length: 2,
+  partTarget: 0.5,
+  lowLatencyMode: true,
+});
 
 
 const PORT = 3001
@@ -37,104 +40,134 @@ app.listen(PORT || 3001, () => {
 
 
 
-const manifestFunction = (req: express.Request, res: express.Response) => {
-  if (!req.params.idx || +req.params.idx < 0 || +req.params.idx > (tsFragmenterThreads.length-1)) {
-    res.statusMessage = 'Not found';
-    return res.status(404).end();
-  }
-
-  const m3u8 = tsFragmenterThreads[+req.params.idx];
-
-  const { _HLS_msn, _HLS_part } = req.query;
-
-  if (_HLS_msn && _HLS_part) {
-    const msn = Number.parseInt(_HLS_msn as string);
-    const part = Number.parseInt(_HLS_part as string);
-
-    if (m3u8.isFulfilledPartial(msn, part)) {
-      res.set('Content-Type', 'application/vnd.apple.mpegurl')
-      res.send(m3u8.getManifest());
-    } else {
-      m3u8.addPartialCallback(msn, part, () => {
-        res.set('Content-Type', 'application/vnd.apple.mpegurl')
-        res.send(m3u8.getManifest());
-      })
-    }
-  } else if (_HLS_msn) {
-    const msn = Number.parseInt(_HLS_msn as string);
-    const part = 0;
-
-    if (m3u8.isFulfilledPartial(msn, part)) {
-      res.set('Content-Type', 'application/vnd.apple.mpegurl')
-      res.send(m3u8.getManifest());
-    } else {
-      m3u8.addPartialCallback(msn, part, () => {
-        res.set('Content-Type', 'application/vnd.apple.mpegurl')
-        res.send(m3u8.getManifest());
-      })
-    }
-  } else {
-    res.set('Content-Type', 'application/vnd.apple.mpegurl')
-    res.send(m3u8.getManifest());
-  }
-}
 
 
-const segmentFunction = (req: express.Request, res: express.Response) => {
-  if (!req.params.idx || +req.params.idx < 0 || +req.params.idx > (tsFragmenterThreads.length-1)) {
-    res.statusMessage = 'Not found';
-    return res.status(404).end();
-  }
+// test reading named pipe
 
-  const m3u8 = tsFragmenterThreads[+req.params.idx];
+// https://stackoverflow.com/a/52622889
+fs.open('./myfifo1', fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, (err, fd) => {
+  // Handle err
+  const pipe = new net.Socket({ fd });
+  // Now `pipe` is a stream that can be used for reading from the FIFO.
+  // pipe.on('data', (data) => {
+  //   // process data ...
+  //   console.log(data);
+  // });
 
-  const { msn } = req.query;
-  const _msn = Number.parseInt(msn as string)
+  pipe.pipe(m3u8)
+});
 
-  if (!m3u8.inRangeSegment(_msn)) {
-    res.status(404).end();
-    return;
-  }
 
-  if (m3u8.isFulfilledSegment(_msn)) {
-    res.set('Content-Type', 'video/mp2t');
-    res.send(m3u8.getSegment(_msn));
-  } else {
-    m3u8.addSegmentCallback(_msn, () => {
-      res.set('Content-Type', 'video/mp2t');
-      res.send(m3u8.getSegment(_msn));
-    });
-  }
-}
 
-const partFunction = (req: express.Request, res: express.Response) => {
-  if (!req.params.idx || +req.params.idx < 0 || +req.params.idx > (tsFragmenterThreads.length-1)) {
-    res.statusMessage = 'Not found';
-    return res.status(404).end();
-  }
 
-  const m3u8 = tsFragmenterThreads[+req.params.idx];
 
-  const { msn, part } = req.query;
 
-  const _msn = Number.parseInt(msn as string);
-  const _part = Number.parseInt(part as string);
 
-  if (!m3u8.inRangePartial(_msn, _part)) {
-    res.status(404).end();
-    return;
-  }
 
-  if (m3u8.isFulfilledPartial(_msn, _part)) {
-    res.set('Content-Type', 'video/mp2t');
-    res.send(m3u8.getPartial(_msn, _part));
-  } else {
-    m3u8.addPartialCallback(_msn, _part, () => {
-      res.set('Content-Type', 'video/mp2t');
-      res.send(m3u8.getPartial(_msn, _part));
-    })
-  }
-}
+
+
+
+
+
+
+// const manifestFunction = (req: express.Request, res: express.Response) => {
+//   if (!req.params.idx || +req.params.idx < 0 || +req.params.idx > (tsFragmenterThreads.length-1)) {
+//     res.statusMessage = 'Not found';
+//     return res.status(404).end();
+//   }
+
+//   const m3u8 = tsFragmenterThreads[+req.params.idx];
+
+//   const { _HLS_msn, _HLS_part } = req.query;
+
+//   if (_HLS_msn && _HLS_part) {
+//     const msn = Number.parseInt(_HLS_msn as string);
+//     const part = Number.parseInt(_HLS_part as string);
+
+//     if (m3u8.isFulfilledPartial(msn, part)) {
+//       res.set('Content-Type', 'application/vnd.apple.mpegurl')
+//       res.send(m3u8.getManifest());
+//     } else {
+//       m3u8.addPartialCallback(msn, part, () => {
+//         res.set('Content-Type', 'application/vnd.apple.mpegurl')
+//         res.send(m3u8.getManifest());
+//       })
+//     }
+//   } else if (_HLS_msn) {
+//     const msn = Number.parseInt(_HLS_msn as string);
+//     const part = 0;
+
+//     if (m3u8.isFulfilledPartial(msn, part)) {
+//       res.set('Content-Type', 'application/vnd.apple.mpegurl')
+//       res.send(m3u8.getManifest());
+//     } else {
+//       m3u8.addPartialCallback(msn, part, () => {
+//         res.set('Content-Type', 'application/vnd.apple.mpegurl')
+//         res.send(m3u8.getManifest());
+//       })
+//     }
+//   } else {
+//     res.set('Content-Type', 'application/vnd.apple.mpegurl')
+//     res.send(m3u8.getManifest());
+//   }
+// }
+
+
+// const segmentFunction = (req: express.Request, res: express.Response) => {
+//   if (!req.params.idx || +req.params.idx < 0 || +req.params.idx > (tsFragmenterThreads.length-1)) {
+//     res.statusMessage = 'Not found';
+//     return res.status(404).end();
+//   }
+
+//   const m3u8 = tsFragmenterThreads[+req.params.idx];
+
+//   const { msn } = req.query;
+//   const _msn = Number.parseInt(msn as string)
+
+//   if (!m3u8.inRangeSegment(_msn)) {
+//     res.status(404).end();
+//     return;
+//   }
+
+//   if (m3u8.isFulfilledSegment(_msn)) {
+//     res.set('Content-Type', 'video/mp2t');
+//     res.send(m3u8.getSegment(_msn));
+//   } else {
+//     m3u8.addSegmentCallback(_msn, () => {
+//       res.set('Content-Type', 'video/mp2t');
+//       res.send(m3u8.getSegment(_msn));
+//     });
+//   }
+// }
+
+// const partFunction = (req: express.Request, res: express.Response) => {
+//   if (!req.params.idx || +req.params.idx < 0 || +req.params.idx > (tsFragmenterThreads.length-1)) {
+//     res.statusMessage = 'Not found';
+//     return res.status(404).end();
+//   }
+
+//   const m3u8 = tsFragmenterThreads[+req.params.idx];
+
+//   const { msn, part } = req.query;
+
+//   const _msn = Number.parseInt(msn as string);
+//   const _part = Number.parseInt(part as string);
+
+//   if (!m3u8.inRangePartial(_msn, _part)) {
+//     res.status(404).end();
+//     return;
+//   }
+
+//   if (m3u8.isFulfilledPartial(_msn, _part)) {
+//     res.set('Content-Type', 'video/mp2t');
+//     res.send(m3u8.getPartial(_msn, _part));
+//   } else {
+//     m3u8.addPartialCallback(_msn, _part, () => {
+//       res.set('Content-Type', 'video/mp2t');
+//       res.send(m3u8.getPartial(_msn, _part));
+//     })
+//   }
+// }
 
 
 
@@ -166,41 +199,41 @@ const partFunction = (req: express.Request, res: express.Response) => {
 
 
 
-const ffmpegPath = undefined;
-const ffmpegOptions = { // options ffmpeg flags
-  '-c:v': 'libx264',
-  '-stats': '', // an option with no neccessary value uses a blank string
-  '-r': 30 // options with required values specify the value after the key
-}
+// const ffmpegPath = undefined;
+// const ffmpegOptions = { // options ffmpeg flags
+//   '-c:v': 'libx264',
+//   '-stats': '', // an option with no neccessary value uses a blank string
+//   '-r': 30 // options with required values specify the value after the key
+// }
 
 
 
-for (let i=0; i<MAX_THREADS; i++) {
-  tsFragmenterThreads.push(
-    new M3U8({ 
-      length: 2,
-      partTarget: 0.5,
-      lowLatencyMode: true,
-    })
-  );
+// for (let i=0; i<MAX_THREADS; i++) {
+//   tsFragmenterThreads.push(
+//     new M3U8({ 
+//       length: 2,
+//       partTarget: 0.5,
+//       lowLatencyMode: true,
+//     })
+//   );
 
-  mpegMuxThreads.push(
-    new Mpeg1Muxer({
-      ffmpegOptions,
-      url: 'rtsp://localhost:8554/mystream',
-      ffmpegPath: ffmpegPath == undefined ? "ffmpeg" : ffmpegPath
-    })
-  )
+//   mpegMuxThreads.push(
+//     new Mpeg1Muxer({
+//       ffmpegOptions,
+//       url: 'rtsp://localhost:8554/mystream',
+//       ffmpegPath: ffmpegPath == undefined ? "ffmpeg" : ffmpegPath
+//     })
+//   )
 
-  mpegMuxThreads[i].stream.stdout.pipe(tsFragmenterThreads[i]);
+//   mpegMuxThreads[i].stream.stdout.pipe(tsFragmenterThreads[i]);
 
 
 
-}
+// }
 
-app.get(`/:idx/manifest.m3u8`, manifestFunction);
-app.get(`/:idx/segment`, segmentFunction);
-app.get(`/:idx/part`, partFunction);
+// app.get(`/:idx/manifest.m3u8`, manifestFunction);
+// app.get(`/:idx/segment`, segmentFunction);
+// app.get(`/:idx/part`, partFunction);
 
 
 // const muxer = new Mpeg1Muxer({
@@ -373,82 +406,82 @@ app.get(`/:idx/part`, partFunction);
 
 
 
-// app.get('/manifest.m3u8', (req: express.Request, res: express.Response) => {
-//   const { _HLS_msn, _HLS_part } = req.query;
+app.get('/manifest.m3u8', (req: express.Request, res: express.Response) => {
+  const { _HLS_msn, _HLS_part } = req.query;
 
-//   if (_HLS_msn && _HLS_part) {
-//     const msn = Number.parseInt(_HLS_msn as string);
-//     const part = Number.parseInt(_HLS_part as string);
+  if (_HLS_msn && _HLS_part) {
+    const msn = Number.parseInt(_HLS_msn as string);
+    const part = Number.parseInt(_HLS_part as string);
 
-//     if (m3u8.isFulfilledPartial(msn, part)) {
-//       res.set('Content-Type', 'application/vnd.apple.mpegurl')
-//       res.send(m3u8.getManifest());
-//     } else {
-//       m3u8.addPartialCallback(msn, part, () => {
-//         res.set('Content-Type', 'application/vnd.apple.mpegurl')
-//         res.send(m3u8.getManifest());
-//       })
-//     }
-//   } else if (_HLS_msn) {
-//     const msn = Number.parseInt(_HLS_msn as string);
-//     const part = 0;
+    if (m3u8.isFulfilledPartial(msn, part)) {
+      res.set('Content-Type', 'application/vnd.apple.mpegurl')
+      res.send(m3u8.getManifest());
+    } else {
+      m3u8.addPartialCallback(msn, part, () => {
+        res.set('Content-Type', 'application/vnd.apple.mpegurl')
+        res.send(m3u8.getManifest());
+      })
+    }
+  } else if (_HLS_msn) {
+    const msn = Number.parseInt(_HLS_msn as string);
+    const part = 0;
 
-//     if (m3u8.isFulfilledPartial(msn, part)) {
-//       res.set('Content-Type', 'application/vnd.apple.mpegurl')
-//       res.send(m3u8.getManifest());
-//     } else {
-//       m3u8.addPartialCallback(msn, part, () => {
-//         res.set('Content-Type', 'application/vnd.apple.mpegurl')
-//         res.send(m3u8.getManifest());
-//       })
-//     }
-//   } else {
-//     res.set('Content-Type', 'application/vnd.apple.mpegurl')
-//     res.send(m3u8.getManifest());
-//   }
-// })
+    if (m3u8.isFulfilledPartial(msn, part)) {
+      res.set('Content-Type', 'application/vnd.apple.mpegurl')
+      res.send(m3u8.getManifest());
+    } else {
+      m3u8.addPartialCallback(msn, part, () => {
+        res.set('Content-Type', 'application/vnd.apple.mpegurl')
+        res.send(m3u8.getManifest());
+      })
+    }
+  } else {
+    res.set('Content-Type', 'application/vnd.apple.mpegurl')
+    res.send(m3u8.getManifest());
+  }
+})
 
-// app.get('/segment', (req: express.Request, res: express.Response) => {
-//   const { msn } = req.query;
-//   const _msn = Number.parseInt(msn as string)
+app.get('/segment', (req: express.Request, res: express.Response) => {
+  const { msn } = req.query;
+  const _msn = Number.parseInt(msn as string)
 
-//   if (!m3u8.inRangeSegment(_msn)) {
-//     res.status(404).end();
-//     return;
-//   }
+  if (!m3u8.inRangeSegment(_msn)) {
+    res.status(404).end();
+    return;
+  }
 
-//   if (m3u8.isFulfilledSegment(_msn)) {
-//     res.set('Content-Type', 'video/mp2t');
-//     res.send(m3u8.getSegment(_msn));
-//   } else {
-//     m3u8.addSegmentCallback(_msn, () => {
-//       res.set('Content-Type', 'video/mp2t');
-//       res.send(m3u8.getSegment(_msn));
-//     });
-//   }
-// })
+  if (m3u8.isFulfilledSegment(_msn)) {
+    res.set('Content-Type', 'video/mp2t');
+    res.send(m3u8.getSegment(_msn));
+  } else {
+    m3u8.addSegmentCallback(_msn, () => {
+      res.set('Content-Type', 'video/mp2t');
+      res.send(m3u8.getSegment(_msn));
+    });
+  }
+})
 
-// app.get('/part', (req: express.Request, res: express.Response) => {
-//   const { msn, part } = req.query;
+app.get('/part', (req: express.Request, res: express.Response) => {
+  const { msn, part } = req.query;
 
-//   const _msn = Number.parseInt(msn as string);
-//   const _part = Number.parseInt(part as string);
+  const _msn = Number.parseInt(msn as string);
+  const _part = Number.parseInt(part as string);
 
-//   if (!m3u8.inRangePartial(_msn, _part)) {
-//     res.status(404).end();
-//     return;
-//   }
+  if (!m3u8.inRangePartial(_msn, _part)) {
+    res.status(404).end();
+    return;
+  }
 
-//   if (m3u8.isFulfilledPartial(_msn, _part)) {
-//     res.set('Content-Type', 'video/mp2t');
-//     res.send(m3u8.getPartial(_msn, _part));
-//   } else {
-//     m3u8.addPartialCallback(_msn, _part, () => {
-//       res.set('Content-Type', 'video/mp2t');
-//       res.send(m3u8.getPartial(_msn, _part));
-//     })
-//   }
-// })
+  if (m3u8.isFulfilledPartial(_msn, _part)) {
+    res.set('Content-Type', 'video/mp2t');
+    res.send(m3u8.getPartial(_msn, _part));
+  } else {
+    m3u8.addPartialCallback(_msn, _part, () => {
+      res.set('Content-Type', 'video/mp2t');
+      res.send(m3u8.getPartial(_msn, _part));
+    })
+  }
+})
 
 
 
