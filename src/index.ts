@@ -11,7 +11,7 @@ const PORT = 3001
 const PORT_TCP_SERVER_SINK = 3002
 
 
-const MAX_THREADS = 10; // set to max n'o camera streams
+const MAX_THREADS = 200; // set to max n'o camera streams
 const FIFO_NAME = './myfifo1'
 const tsFragmenterThreads = [];
 const mpegMuxThreads = [];
@@ -28,7 +28,7 @@ const initThreads = async () => {
     tsFragmenterThreads.push(
       new M3U8({ 
         length: 2,
-        partTarget: 0.3,
+        partTarget: 0.2,
         lowLatencyMode: true,
       })
     );
@@ -51,18 +51,30 @@ const initThreads = async () => {
   // });
 
 
-  const server = net.createServer(socket => {
-    socket.setMaxListeners(0);
+  // const server = net.createServer(socket => {
+  //   socket.setMaxListeners(0);
 
-    for (let i=0; i<MAX_THREADS; i++) {
-      socket.pipe(mpegMuxThreads[i]);
-      mpegMuxThreads[i].pipe(tsFragmenterThreads[i]);
-    }
-  })
+  //   for (let i=0; i<MAX_THREADS; i++) {
+  //     socket.pipe(mpegMuxThreads[i]);
+  //     mpegMuxThreads[i].pipe(tsFragmenterThreads[i]);
+  //   }
+  // })
   
-  server.listen(PORT_TCP_SERVER_SINK, () => {
+  // server.listen(PORT_TCP_SERVER_SINK, () => {
+  //   console.log(`Start on port ${PORT_TCP_SERVER_SINK}.`)
+  // });
+
+  const client = new net.Socket();
+  client.connect(PORT_TCP_SERVER_SINK, () => {
     console.log(`Start on port ${PORT_TCP_SERVER_SINK}.`)
   });
+
+  client.setMaxListeners(0);
+
+  for (let i=0; i<MAX_THREADS; i++) {
+    client.pipe(mpegMuxThreads[i]);
+    mpegMuxThreads[i].pipe(tsFragmenterThreads[i]);
+  }
 }
 
 initThreads();
