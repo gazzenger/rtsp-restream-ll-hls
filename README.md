@@ -101,6 +101,7 @@ https://developer.apple.com/documentation/http_live_streaming/http_live_streamin
 
 
 ## Using Named Pipes
+(b5e2c6530eb9b74b09972589e0298faabc86227c)
 
 Use of named pipes will allow us to output directly from an existing GStreamer pipeline, replacing the existing HLSSink.
 

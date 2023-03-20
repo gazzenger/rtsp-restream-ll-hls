@@ -5,7 +5,8 @@
   "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node ./src/index.ts & ./run-test-bars.sh"
+    "start": "ts-node ./src/index.ts",
+    "start:test-stream": "./run-test-bars.sh"
   },
   "author": "",
   "license": "ISC",
